@@ -10,9 +10,23 @@ import (
 	"github.com/haclark30/toggl-cli/toggl"
 )
 
-const tokenPath = "./.toggl/api_token"
+const configDir = "/.toggl/"
+const tokenFile = "api_token"
 
+// Look for config directory at ~/.toggl and check if api_token file exists
 func getApiToken() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("Error getting home dir: %v", err)
+	}
+	configPath := homeDir + configDir
+	if _, err := os.Stat(configPath); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(configPath, os.ModePerm)
+		if err != nil {
+			log.Fatalf("Error creating config dir: %v", err)
+		}
+	}
+	tokenPath := configPath + tokenFile
 	if _, err := os.Stat(tokenPath); err == nil {
 		token, err := os.ReadFile(tokenPath)
 		if err != nil {
@@ -54,11 +68,31 @@ func getApiToken() string {
 func main() {
 	apiToken := getApiToken()
 	client := toggl.NewTogglClient(apiToken)
+
+	args := os.Args[1:]
+	if len(args) > 0 {
+		switch args[0] {
+		case "me":
+			handleMe(&client)
+		case "current":
+			handleCurrentTimer(&client)
+		default:
+			fmt.Println("not a valid command")
+		}
+	} else {
+		fmt.Println("no command")
+	}
+}
+
+func handleMe(client *toggl.TogglClient) {
 	me, err := client.Me()
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(me.Fullname)
+}
+
+func handleCurrentTimer(client *toggl.TogglClient) {
 
 	te, err := client.GetCurrentTimeEntry()
 	if err != nil {
