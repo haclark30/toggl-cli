@@ -22,3 +22,4 @@ go.work
 .toggl/*
 cmd/toggl-cli/.toggl/*
 *.http
+out/*
