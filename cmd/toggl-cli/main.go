@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/haclark30/toggl-cli/toggl"
 )
 
 const configDir = "/.toggl/"
 const tokenFile = "api_token"
+const workspaceID = 7636849
 
 // Look for config directory at ~/.toggl and check if api_token file exists
 func getApiToken() string {
@@ -76,6 +78,12 @@ func main() {
 			handleMe(&client)
 		case "current":
 			handleCurrentTimer(&client)
+		case "start":
+			if len(args) > 1 {
+				handleStart(&client, args[1])
+			} else {
+				fmt.Println("start requires additional parameter")
+			}
 		default:
 			fmt.Println("not a valid command")
 		}
@@ -98,5 +106,21 @@ func handleCurrentTimer(client *toggl.TogglClient) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	duration := time.Now().Sub(te.Start)
 	fmt.Println(te.Description)
+	fmt.Println(duration)
+}
+
+func handleStart(client *toggl.TogglClient, description string) {
+	timeEntry := toggl.CreateTimeEntry{
+		CreatedWith: "toggl cli",
+		WorkspaceID: workspaceID,
+		Description: description,
+		Start:       time.Now(),
+		Duration:    -1,
+	}
+	err := client.StartTimeEntry(timeEntry)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

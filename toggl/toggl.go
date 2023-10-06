@@ -1,6 +1,8 @@
 package toggl
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"path"
@@ -34,4 +36,22 @@ func (c TogglClient) httpGet(urlPath string) (*http.Response, error) {
 	req.Header.Set("content-type", "application/json")
 
 	return c.httpClient.Do(req)
+}
+
+func (c TogglClient) httpPost(urlPath string, body any) (*http.Response, error) {
+	c.baseUrl.Path = path.Join(c.baseUrl.Path, urlPath)
+	var buffer bytes.Buffer
+	encoder := json.NewEncoder(&buffer)
+	if err := encoder.Encode(body); err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, c.baseUrl.String(), &buffer)
+
+	if err != nil {
+		return nil, err
+	}
+	req.SetBasicAuth(c.apiToken, basicAuthPassword)
+	return c.httpClient.Do(req)
+
 }

@@ -3,6 +3,8 @@ package toggl
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -28,6 +30,14 @@ type TimeEntry struct {
 	WID             int        `json:"wid,omitempty"`
 }
 
+type CreateTimeEntry struct {
+	CreatedWith string    `json:"created_with,omitempty"`
+	Description string    `json:"description,omitempty"`
+	Start       time.Time `json:"start,omitempty"`
+	Duration    int       `json:"duration,omitempty"`
+	WorkspaceID int       `json:"workspace_id,omitempty"`
+}
+
 func (t TimeEntry) IsZero() bool {
 	return t.ID == 0 && t.Start.IsZero()
 }
@@ -48,4 +58,17 @@ func (c TogglClient) GetCurrentTimeEntry() (TimeEntry, error) {
 		return timeEntry, errors.New("no timer is running")
 	}
 	return timeEntry, nil
+}
+
+func (c TogglClient) StartTimeEntry(timeEntry CreateTimeEntry) error {
+	url := fmt.Sprintf("api/v9/workspaces/%d/time_entries", timeEntry.WorkspaceID)
+	resp, err := c.httpPost(url, timeEntry)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New(fmt.Sprintf("got bad status code %d", resp.StatusCode))
+	}
+	return err
 }
