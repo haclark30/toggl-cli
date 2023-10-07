@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 	"strconv"
+	"time"
+
 	"github.com/haclark30/toggl-cli/toggl"
 )
 
@@ -87,6 +88,14 @@ func main() {
 				handleStart(&client, args[1])
 			} else {
 				fmt.Println("start requires additional parameter")
+				os.Exit(-1)
+			}
+		case "rewind":
+			if len(args) > 1 {
+				handleRewind(&client, args[1])
+			} else {
+				fmt.Println("rewind requires addtional paramter")
+				os.Exit(-1)
 			}
 		default:
 			fmt.Println("not a valid command")
@@ -133,8 +142,42 @@ func handleStart(client *toggl.TogglClient, description string) {
 	}
 	err := client.StartTimeEntry(timeEntry)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
+}
+
+func handleRewind(client *toggl.TogglClient, minutes string) {
+	minutesInt, err := strconv.Atoi(minutes)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	entries, err := client.GetTimeEntries()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	if len(entries) == 0 {
+		log.Fatalln("no timers")
+	}
+
+	entries[0].Start = entries[0].Start.Add(time.Duration(-minutesInt) * time.Minute)
+
+	// update this to use bulk edit PATCH endpoint instead
+	err = client.UpdateTimeEntry(entries[0])
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if len(entries) > 1 {
+		newStop := entries[1].Stop.Add(time.Duration(-minutesInt) * time.Minute)
+		entries[1].Stop = &newStop
+		err := client.UpdateTimeEntry(entries[1])
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+	fmt.Println("updated start time")
 }
 
 // The RGB type holds three values: one for red (R), green, (G) and

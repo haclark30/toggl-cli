@@ -9,6 +9,7 @@ import (
 )
 
 const currentTimePath = "api/v9/me/time_entries/current"
+const timeEntriesPath = "api/v9/me/time_entries"
 
 type TimeEntry struct {
 	ID              int        `json:"id,omitempty"`
@@ -38,6 +39,11 @@ type CreateTimeEntry struct {
 	WorkspaceID int       `json:"workspace_id,omitempty"`
 }
 
+type UpdateTimeEntry struct {
+	Start time.Time `json:"start,omitempty"`
+	Stop  time.Time `json:"stop,omitempty"`
+}
+
 func (t TimeEntry) IsZero() bool {
 	return t.ID == 0 && t.Start.IsZero()
 }
@@ -60,6 +66,21 @@ func (c TogglClient) GetCurrentTimeEntry() (TimeEntry, error) {
 	return timeEntry, nil
 }
 
+func (c TogglClient) GetTimeEntries() ([]TimeEntry, error) {
+	var timeEntries []TimeEntry
+	resp, err := c.httpGet(timeEntriesPath)
+	defer resp.Body.Close()
+	if err != nil {
+		return timeEntries, err
+	}
+
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&timeEntries); err != nil {
+		return timeEntries, err
+	}
+	return timeEntries, nil
+}
+
 func (c TogglClient) StartTimeEntry(timeEntry CreateTimeEntry) error {
 	url := fmt.Sprintf("api/v9/workspaces/%d/time_entries", timeEntry.WorkspaceID)
 	resp, err := c.httpPost(url, timeEntry)
@@ -71,4 +92,20 @@ func (c TogglClient) StartTimeEntry(timeEntry CreateTimeEntry) error {
 		return errors.New(fmt.Sprintf("got bad status code %d", resp.StatusCode))
 	}
 	return err
+}
+
+func (c TogglClient) UpdateTimeEntry(timeEntry TimeEntry) error {
+	url := fmt.Sprintf("api/v9/workspaces/%d/time_entries/%d", timeEntry.WorkspaceID, timeEntry.ID)
+	updateEntry := UpdateTimeEntry{Start: timeEntry.Start}
+	if timeEntry.Stop != nil {
+		updateEntry.Stop = *timeEntry.Stop
+	}
+	resp, err := c.httpPut(url, updateEntry)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode > 300 {
+		return errors.New(fmt.Sprintf("god bad status code %d", resp.StatusCode))
+	}
+	return nil
 }
