@@ -7,13 +7,17 @@ import (
 	"log"
 	"os"
 	"time"
-
+	"strconv"
 	"github.com/haclark30/toggl-cli/toggl"
 )
 
 const configDir = "/.toggl/"
 const tokenFile = "api_token"
 const workspaceID = 7636849
+const ansiReset = "\033[0m"
+
+type Hex string
+type Ansi string
 
 // Look for config directory at ~/.toggl and check if api_token file exists
 func getApiToken() string {
@@ -106,9 +110,17 @@ func handleCurrentTimer(client *toggl.TogglClient) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	proj, err := client.GetProject(te.WorkspaceID, *te.ProjectID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	projColor := HextoAnsi(Hex(proj.Color))
 	duration := time.Now().Sub(te.Start)
-	fmt.Println(te.Description)
-	fmt.Println(duration)
+	hours := int(duration.Hours())
+	minutes := int(duration.Minutes()) % 60
+	seconds := int(duration.Seconds()) % 60
+	fmt.Printf(" %s▶ tracking %s on %s for %01d:%02d:%02d%s\n", projColor, te.Description, proj.Name, hours, minutes, seconds, ansiReset)
 }
 
 func handleStart(client *toggl.TogglClient, description string) {
@@ -123,4 +135,34 @@ func handleStart(client *toggl.TogglClient, description string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// The RGB type holds three values: one for red (R), green, (G) and
+// blue (B). Each of these colors are on the domain of [0, 255].
+type RGB struct {
+	R int `json:"R"`
+	G int `json:"G"`
+	B int `json:"B"`
+}
+
+// HextoRGB converts a hexadecimal string to RGB values
+func HextoRGB(hex Hex) RGB {
+	if hex[0:1] == "#" {
+		hex = hex[1:]
+	}
+	r := string(hex)[0:2]
+	g := string(hex)[2:4]
+	b := string(hex)[4:6]
+	R, _ := strconv.ParseInt(r, 16, 0)
+	G, _ := strconv.ParseInt(g, 16, 0)
+	B, _ := strconv.ParseInt(b, 16, 0)
+
+	return RGB{int(R), int(G), int(B)}
+}
+
+// HextoAnsi converts a hexadecimal string to an Ansi escape code
+func HextoAnsi(hex Hex) Ansi {
+	rgb := HextoRGB(hex)
+	str := "\x1b[38;2;" + strconv.FormatInt(int64(rgb.R), 10) + ";" + strconv.FormatInt(int64(rgb.G), 10) + ";" + strconv.FormatInt(int64(rgb.B), 10) + "m"
+	return Ansi(str)
 }
