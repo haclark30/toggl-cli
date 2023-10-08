@@ -1,4 +1,4 @@
 build:
-	go build -o out/toggl ./cmd/toggl-cli/
+	go build -o out/tempus
 clean:
 	rm ./out/*

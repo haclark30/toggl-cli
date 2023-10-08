@@ -18,7 +18,7 @@ type TogglClient struct {
 	apiToken   string
 }
 
-func NewTogglClient(apiToken string) TogglClient {
+func NewTogglClient(apiToken string) *TogglClient {
 	baseUrl, _ := url.Parse(baseTogglUrl)
 	client := TogglClient{
 		baseUrl:    *baseUrl,
@@ -26,7 +26,7 @@ func NewTogglClient(apiToken string) TogglClient {
 		apiToken:   apiToken,
 	}
 
-	return client
+	return &client
 }
 
 func (c TogglClient) httpGet(urlPath string) (*http.Response, error) {
