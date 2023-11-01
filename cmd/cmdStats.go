@@ -3,6 +3,9 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"os"
+	"sort"
+	"text/tabwriter"
 	"time"
 
 	"github.com/haclark30/toggl-cli/toggl"
@@ -37,11 +40,18 @@ func handleStats(client *toggl.TogglClient, workspaceId int) {
 		log.Fatalln(err)
 	}
 
+	sort.Slice(report, func(i, j int) bool {
+		return report[i].TrackedSeconds > report[j].TrackedSeconds
+	})
+
+	writer := tabwriter.NewWriter(os.Stdout, 10, 1, 1, ' ', tabwriter.Debug)
 	var totalTime time.Duration = 0
 	for _, entry := range report {
 		duration := time.Duration(entry.TrackedSeconds * int(time.Second))
 		totalTime += duration
-		fmt.Printf("%s - %s\n", projMap[entry.ProjectId].Name, duration)
+		fmt.Fprintf(writer, "%s\t%s\n", projMap[entry.ProjectId].Name, duration)
 	}
-	fmt.Printf("Total Time - %s\n", totalTime)
+
+	fmt.Fprintf(writer, "Total Time\t%s\n", totalTime)
+	writer.Flush()
 }
