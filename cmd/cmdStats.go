@@ -40,6 +40,30 @@ func handleStats(client *toggl.TogglClient, workspaceId int) {
 		log.Fatalln(err)
 	}
 
+	current, err := client.GetCurrentTimeEntry()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	currDuration := time.Now().Sub(current.Start).Truncate(time.Second).Seconds()
+
+	foundCurrent := false
+	for _, entry := range report {
+		if entry.ProjectId == *current.ProjectID {
+			entry.TrackedSeconds += int(currDuration)
+			foundCurrent = true
+		}
+	}
+
+	if !foundCurrent {
+		currProj := toggl.ProjectSummary{
+			ProjectId:      *current.ProjectID,
+			TrackedSeconds: int(currDuration),
+			UserId:         current.UserID,
+		}
+		report = append(report, currProj)
+	}
+
 	sort.Slice(report, func(i, j int) bool {
 		return report[i].TrackedSeconds > report[j].TrackedSeconds
 	})
