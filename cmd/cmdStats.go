@@ -48,9 +48,9 @@ func handleStats(client *toggl.TogglClient, workspaceId int) {
 	currDuration := time.Now().Sub(current.Start).Truncate(time.Second).Seconds()
 
 	foundCurrent := false
-	for _, entry := range report {
+	for i, entry := range report {
 		if entry.ProjectId == *current.ProjectID {
-			entry.TrackedSeconds += int(currDuration)
+			report[i].TrackedSeconds += int(currDuration)
 			foundCurrent = true
 		}
 	}
