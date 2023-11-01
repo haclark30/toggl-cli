@@ -7,6 +7,7 @@ import (
 )
 
 const getProjectPath = "api/v9/workspaces/%d/projects/%d"
+const getProjectsPath = "api/v9/workspaces/%d/projects"
 
 type Project struct {
 	ID                  int           `json:"id,omitempty"`
@@ -49,4 +50,21 @@ func (c TogglClient) GetProject(workspaceId int, projectId int) (Project, error)
 		return project, err
 	}
 	return project, nil
+}
+
+func (c TogglClient) GetProjects(workspaceId int) ([]Project, error) {
+	var projects []Project
+	projPath := fmt.Sprintf(getProjectsPath, workspaceId)
+	resp, err := c.httpGet(projPath)
+	defer resp.Body.Close()
+	if err != nil {
+		return projects, err
+	}
+
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&projects); err != nil {
+		return projects, err
+	}
+
+	return projects, nil
 }
