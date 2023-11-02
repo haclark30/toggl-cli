@@ -1,6 +1,9 @@
 package cmd
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 type Hex string
 type Ansi string
@@ -35,4 +38,10 @@ func HextoAnsi(hex Hex) Ansi {
 	rgb := HextoRGB(hex)
 	str := "\x1b[38;2;" + strconv.FormatInt(int64(rgb.R), 10) + ";" + strconv.FormatInt(int64(rgb.G), 10) + ";" + strconv.FormatInt(int64(rgb.B), 10) + "m"
 	return Ansi(str)
+}
+
+// color a string with the given hex color
+func StringRgb(str string, color Hex) string {
+	ansiColor := HextoAnsi(color)
+	return fmt.Sprintf("%s%s%s", ansiColor, str, AnsiReset)
 }

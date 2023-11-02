@@ -9,8 +9,11 @@ import (
 	"time"
 
 	"github.com/haclark30/toggl-cli/toggl"
+	"github.com/juju/ansiterm"
 	"github.com/spf13/cobra"
 )
+
+const activeColor = "d4af37"
 
 var statsCmd = &cobra.Command{
 	Use:   "stats",
@@ -68,12 +71,17 @@ func handleStats(client *toggl.TogglClient, workspaceId int) {
 		return report[i].TrackedSeconds > report[j].TrackedSeconds
 	})
 
-	writer := tabwriter.NewWriter(os.Stdout, 10, 1, 1, ' ', tabwriter.Debug)
+	writer := ansiterm.NewTabWriter(os.Stdout, 10, 5, 1, ' ', tabwriter.Debug)
 	var totalTime time.Duration = 0
 	for _, entry := range report {
 		duration := time.Duration(entry.TrackedSeconds * int(time.Second))
 		totalTime += duration
-		fmt.Fprintf(writer, "%s\t%s\n", projMap[entry.ProjectId].Name, duration)
+		durationStr := duration.String()
+		coloredProjName := StringRgb(projMap[entry.ProjectId].Name, Hex(projMap[entry.ProjectId].Color))
+		if entry.ProjectId == *current.ProjectID {
+			durationStr = StringRgb(durationStr, activeColor)
+		}
+		fmt.Fprintf(writer, "%s\t%s\n", coloredProjName, durationStr)
 	}
 
 	fmt.Fprintf(writer, "Total Time\t%s\n", totalTime)
