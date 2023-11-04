@@ -15,19 +15,47 @@ import (
 
 const activeColor = "d4af37"
 
+type TimeFrame int
+
+const (
+	Day TimeFrame = iota
+	Week
+	Month
+	Year
+)
+
 var statsCmd = &cobra.Command{
 	Use:   "stats",
-	Short: "get stats",
+	Short: "get stats, defaults to current day",
 	Run: func(cmd *cobra.Command, args []string) {
-		handleStats(client, 7636849)
+		fmt.Println(args)
+		handleStats(client, workspaceId, Day)
+	},
+}
+
+var dayCmd = &cobra.Command{
+	Use:   "day",
+	Short: "stats for the current day",
+	Run: func(cmd *cobra.Command, args []string) {
+		handleStats(client, workspaceId, Day)
+	},
+}
+
+var weekCmd = &cobra.Command{
+	Use:   "week",
+	Short: "stats for the current week (start from most recent Monday)",
+	Run: func(cmd *cobra.Command, args []string) {
+		handleStats(client, workspaceId, Week)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(statsCmd)
+	statsCmd.AddCommand(dayCmd)
+	statsCmd.AddCommand(weekCmd)
 }
 
-func handleStats(client *toggl.TogglClient, workspaceId int) {
+func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame) {
 	projects, err := client.GetProjects(workspaceId)
 	if err != nil {
 		log.Fatalln(err)
@@ -38,7 +66,16 @@ func handleStats(client *toggl.TogglClient, workspaceId int) {
 		projMap[p.ID] = p
 	}
 
-	report, err := client.GetProjectSummary(workspaceId, time.Now(), time.Now())
+	startTime := time.Now()
+	switch timeFrame {
+	case Day:
+		break
+	case Week:
+		for startTime.Weekday() != time.Monday {
+			startTime = startTime.AddDate(0, 0, -1)
+		}
+	}
+	report, err := client.GetProjectSummary(workspaceId, startTime, time.Now())
 	if err != nil {
 		log.Fatalln(err)
 	}

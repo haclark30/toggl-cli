@@ -10,6 +10,8 @@ import (
 
 var client *toggl.TogglClient
 
+const workspaceId = 7636849
+
 var rootCmd = &cobra.Command{
 	Use:   "tempus",
 	Short: "Command line toggl client",
