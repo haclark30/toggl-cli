@@ -28,7 +28,6 @@ var statsCmd = &cobra.Command{
 	Use:   "stats",
 	Short: "get stats, defaults to current day",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(args)
 		handleStats(client, workspaceId, Day)
 	},
 }
