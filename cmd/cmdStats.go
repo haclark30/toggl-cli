@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -107,7 +108,7 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 		return report[i].TrackedSeconds > report[j].TrackedSeconds
 	})
 
-	writer := ansiterm.NewTabWriter(os.Stdout, 10, 5, 1, ' ', tabwriter.Debug)
+	writer := ansiterm.NewTabWriter(os.Stdout, 10, 5, 75, ' ', tabwriter.Debug)
 	var totalTime time.Duration = 0
 	for _, entry := range report {
 		duration := time.Duration(entry.TrackedSeconds * int(time.Second))
@@ -122,4 +123,11 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 
 	fmt.Fprintf(writer, "Total Time\t%s\n", totalTime)
 	writer.Flush()
+	fmt.Print("\n")
+	for _, entry := range report {
+		percent := float64(entry.TrackedSeconds) / float64(totalTime.Seconds()) * 100
+		bars := strings.Repeat("█", int(percent))
+		fmt.Print(StringRgb(bars, Hex(projMap[entry.ProjectId].Color)))
+	}
+	fmt.Print("\n\n")
 }
