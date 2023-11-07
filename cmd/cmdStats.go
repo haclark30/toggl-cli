@@ -108,26 +108,27 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 		return report[i].TrackedSeconds > report[j].TrackedSeconds
 	})
 
-	writer := ansiterm.NewTabWriter(os.Stdout, 10, 5, 75, ' ', tabwriter.Debug)
 	var totalTime time.Duration = 0
 	for _, entry := range report {
+		dur := time.Duration(entry.TrackedSeconds * int(time.Second))
+		totalTime += dur
+	}
+
+	writer := ansiterm.NewTabWriter(os.Stdout, 10, 5, 1, ' ', tabwriter.Debug)
+	for _, entry := range report {
 		duration := time.Duration(entry.TrackedSeconds * int(time.Second))
-		totalTime += duration
 		durationStr := duration.String()
+		percent := float64(entry.TrackedSeconds) / float64(totalTime.Seconds()) * 100
+		bars := strings.Repeat("█", int(percent))
+		bars = StringRgb(bars, Hex(projMap[entry.ProjectId].Color))
 		coloredProjName := StringRgb(projMap[entry.ProjectId].Name, Hex(projMap[entry.ProjectId].Color))
+		durationStr = fmt.Sprintf("%-8s /%6.2f %%", durationStr, percent)
 		if entry.ProjectId == *current.ProjectID {
 			durationStr = StringRgb(durationStr, activeColor)
 		}
-		fmt.Fprintf(writer, "%s\t%s\n", coloredProjName, durationStr)
+		fmt.Fprintf(writer, "%s\t%s %s\n", coloredProjName, durationStr, bars)
 	}
 
 	fmt.Fprintf(writer, "Total Time\t%s\n", totalTime)
 	writer.Flush()
-	fmt.Print("\n")
-	for _, entry := range report {
-		percent := float64(entry.TrackedSeconds) / float64(totalTime.Seconds()) * 100
-		bars := strings.Repeat("█", int(percent))
-		fmt.Print(StringRgb(bars, Hex(projMap[entry.ProjectId].Color)))
-	}
-	fmt.Print("\n\n")
 }
