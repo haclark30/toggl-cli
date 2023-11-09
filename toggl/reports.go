@@ -20,10 +20,8 @@ type ProjectSummary struct {
 	UserId          int `json:"user_id"`
 }
 
-type ProjectReportResponse []ProjectSummary
-
-func (c TogglClient) GetProjectSummary(workspaceId int, startDate time.Time, endDate time.Time) (ProjectReportResponse, error) {
-	var report ProjectReportResponse
+func (c TogglClient) GetProjectSummary(workspaceId int, startDate time.Time, endDate time.Time) ([]ProjectSummary, error) {
+	var report []ProjectSummary
 	url := fmt.Sprintf("reports/api/v3/workspace/%d/projects/summary", workspaceId)
 	req := ProjectReportRequest{
 		StartDate: startDate.Format(time.DateOnly),

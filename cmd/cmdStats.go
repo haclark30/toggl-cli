@@ -75,7 +75,7 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 			startTime = startTime.AddDate(0, 0, -1)
 		}
 	}
-	report, err := client.GetProjectSummary(workspaceId, startTime, time.Now())
+	projectSummaries, err := client.GetProjectSummary(workspaceId, startTime, time.Now())
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -88,9 +88,9 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 	currDuration := time.Now().Sub(current.Start).Truncate(time.Second).Seconds()
 
 	foundCurrent := false
-	for i, entry := range report {
+	for i, entry := range projectSummaries {
 		if entry.ProjectId == *current.ProjectID {
-			report[i].TrackedSeconds += int(currDuration)
+			projectSummaries[i].TrackedSeconds += int(currDuration)
 			foundCurrent = true
 		}
 	}
@@ -101,21 +101,31 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 			TrackedSeconds: int(currDuration),
 			UserId:         current.UserID,
 		}
-		report = append(report, currProj)
+		projectSummaries = append(projectSummaries, currProj)
 	}
 
-	sort.Slice(report, func(i, j int) bool {
-		return report[i].TrackedSeconds > report[j].TrackedSeconds
+	sort.Slice(projectSummaries, func(i, j int) bool {
+		return projectSummaries[i].TrackedSeconds > projectSummaries[j].TrackedSeconds
 	})
 
+	writer := ansiterm.NewTabWriter(os.Stdout, 10, 5, 1, ' ', tabwriter.Debug)
+	writeProjectStats(writer, projectSummaries, projMap, &current)
+}
+
+// interface that wraps both TabWriter and io.Writer
+type Writer interface {
+	Flush() error
+	Write([]byte) (int, error)
+}
+
+// writes the list of projects using the given Writer
+func writeProjectStats(writer Writer, projects []toggl.ProjectSummary, projMap map[int]toggl.Project, current *toggl.TimeEntry) {
 	var totalTime time.Duration = 0
-	for _, entry := range report {
+	for _, entry := range projects {
 		dur := time.Duration(entry.TrackedSeconds * int(time.Second))
 		totalTime += dur
 	}
-
-	writer := ansiterm.NewTabWriter(os.Stdout, 10, 5, 1, ' ', tabwriter.Debug)
-	for _, entry := range report {
+	for _, entry := range projects {
 		duration := time.Duration(entry.TrackedSeconds * int(time.Second))
 		durationStr := duration.String()
 		percent := float64(entry.TrackedSeconds) / float64(totalTime.Seconds()) * 100
