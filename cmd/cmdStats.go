@@ -122,7 +122,7 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 		bars := strings.Repeat("█", int(percent))
 		bars = StringRgb(bars, Hex(projMap[entry.ProjectId].Color))
 		coloredProjName := StringRgb(projMap[entry.ProjectId].Name, Hex(projMap[entry.ProjectId].Color))
-		durationStr = fmt.Sprintf("%-8s /%6.2f %%", durationStr, percent)
+		durationStr = fmt.Sprintf("%-9s /%6.2f %%", durationStr, percent)
 		if entry.ProjectId == *current.ProjectID {
 			durationStr = StringRgb(durationStr, activeColor)
 		}
