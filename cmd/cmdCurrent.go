@@ -28,9 +28,14 @@ func handleCurrentTimer(client *toggl.TogglClient) {
 		log.Fatal(err)
 	}
 
-	proj, err := client.GetProject(te.WorkspaceID, *te.ProjectID)
-	if err != nil {
-		log.Fatal(err)
+	var proj toggl.Project
+	if te.ProjectID == nil {
+		proj = toggl.Project{Name: "<no project>", Color: "ffffff"}
+	} else {
+		proj, err = client.GetProject(te.WorkspaceID, *te.ProjectID)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	projColor := HextoAnsi(Hex(proj.Color))
 	duration := time.Now().Sub(te.Start)

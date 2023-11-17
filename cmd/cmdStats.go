@@ -87,23 +87,34 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 
 	currDuration := time.Now().Sub(current.Start).Truncate(time.Second).Seconds()
 
-	foundCurrent := false
-	for i, entry := range projectSummaries {
-		if entry.ProjectId == *current.ProjectID {
-			projectSummaries[i].TrackedSeconds += int(currDuration)
-			foundCurrent = true
-		}
-	}
-
-	if !foundCurrent {
-		currProj := toggl.ProjectSummary{
-			ProjectId:      *current.ProjectID,
+	if current.ProjectID == nil {
+		current.ProjectID = new(int)
+		*current.ProjectID = 0
+		projSum := toggl.ProjectSummary{
+			ProjectId:      0,
 			TrackedSeconds: int(currDuration),
 			UserId:         current.UserID,
 		}
-		projectSummaries = append(projectSummaries, currProj)
-	}
+		projectSummaries = append(projectSummaries, projSum)
+		projMap[0] = toggl.Project{Name: "<no project>", Color: "ffffff"}
+	} else {
+		foundCurrent := false
+		for i, entry := range projectSummaries {
+			if entry.ProjectId == *current.ProjectID {
+				projectSummaries[i].TrackedSeconds += int(currDuration)
+				foundCurrent = true
+			}
+		}
 
+		if !foundCurrent {
+			currProj := toggl.ProjectSummary{
+				ProjectId:      *current.ProjectID,
+				TrackedSeconds: int(currDuration),
+				UserId:         current.UserID,
+			}
+			projectSummaries = append(projectSummaries, currProj)
+		}
+	}
 	sort.Slice(projectSummaries, func(i, j int) bool {
 		return projectSummaries[i].TrackedSeconds > projectSummaries[j].TrackedSeconds
 	})
