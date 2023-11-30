@@ -65,17 +65,31 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 	for _, p := range projects {
 		projMap[p.ID] = p
 	}
-
+	// setup the start time
 	startTime := time.Now()
+	var prevStartTime time.Time
+	var prevEndTime time.Time
+
 	switch timeFrame {
 	case Day:
-		break
+		prevStartTime = startTime.AddDate(0, 0, -1)
+		prevEndTime = prevStartTime
 	case Week:
 		for startTime.Weekday() != time.Monday {
 			startTime = startTime.AddDate(0, 0, -1)
+		
 		}
+		prevStartTime = startTime.AddDate(0, 0, -7)
+		prevEndTime = prevStartTime.AddDate(0, 0, 6)
 	}
+
+	// get summaries from TogglAPI
 	projectSummaries, err := client.GetProjectSummary(workspaceId, startTime, time.Now())
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	prevProjectSummaries, err := client.GetProjectSummary(workspaceId, prevStartTime, prevEndTime)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -87,6 +101,7 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 
 	currDuration := time.Now().Sub(current.Start).Truncate(time.Second).Seconds()
 
+	// handle case when current timer has no project
 	if current.ProjectID == nil {
 		current.ProjectID = new(int)
 		*current.ProjectID = 0
@@ -98,6 +113,7 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 		projectSummaries = append(projectSummaries, projSum)
 		projMap[0] = toggl.Project{Name: "<no project>", Color: "ffffff"}
 	} else {
+		// check if current timer is part of project already in the summaries
 		foundCurrent := false
 		for i, entry := range projectSummaries {
 			if entry.ProjectId == *current.ProjectID {
@@ -115,12 +131,25 @@ func handleStats(client *toggl.TogglClient, workspaceId int, timeFrame TimeFrame
 			projectSummaries = append(projectSummaries, currProj)
 		}
 	}
+
+	// sort by duration
 	sort.Slice(projectSummaries, func(i, j int) bool {
 		return projectSummaries[i].TrackedSeconds > projectSummaries[j].TrackedSeconds
 	})
 
-	writer := ansiterm.NewTabWriter(os.Stdout, 10, 5, 1, ' ', tabwriter.Debug)
+	sort.Slice(prevProjectSummaries, func(i, j int) bool {
+		return prevProjectSummaries[i].TrackedSeconds > prevProjectSummaries[j].TrackedSeconds
+	})
+
+	// write the results
+	// TODO: change 25 to the max project name length + 1?
+	writer := ansiterm.NewTabWriter(os.Stdout, 25, 5, 1, ' ', tabwriter.Debug)
+	fmt.Fprintln(writer, prevStartTime.Format("2006-01-02"))
+	writeProjectStats(writer, prevProjectSummaries, projMap, nil)
+	fmt.Fprintln(writer, "")
+	fmt.Fprintln(writer, startTime.Format("2006-01-02"))
 	writeProjectStats(writer, projectSummaries, projMap, &current)
+	writer.Flush()
 }
 
 // interface that wraps both TabWriter and io.Writer
@@ -144,12 +173,11 @@ func writeProjectStats(writer Writer, projects []toggl.ProjectSummary, projMap m
 		bars = StringRgb(bars, Hex(projMap[entry.ProjectId].Color))
 		coloredProjName := StringRgb(projMap[entry.ProjectId].Name, Hex(projMap[entry.ProjectId].Color))
 		durationStr = fmt.Sprintf("%-9s /%6.2f %%", durationStr, percent)
-		if entry.ProjectId == *current.ProjectID {
+		if current != nil && entry.ProjectId == *current.ProjectID {
 			durationStr = StringRgb(durationStr, activeColor)
 		}
 		fmt.Fprintf(writer, "%s\t%s %s\n", coloredProjName, durationStr, bars)
 	}
 
 	fmt.Fprintf(writer, "Total Time\t%s\n", totalTime)
-	writer.Flush()
 }
